@@ -12,6 +12,9 @@
 #define INACTIVE_NODE   0xAA00
 #define ACTIVE_EDGE     0xF800
 #define INACTIVE_EDGE   0x00E0
+#define CANCEL_BUTTON   0x8800
+#define CONFIRM_BUTTON  0x0440
+#define BUTTON_CONTENT  0xFFFF
 
 // Screen
 MCUFRIEND_kbv tft;
@@ -20,7 +23,7 @@ MCUFRIEND_kbv tft;
 const int XP=6,XM=A2,YP=A1,YM=7; //ID=0x9341
 const int TS_LEFT=915,TS_RT=183,TS_TOP=953,TS_BOT=206;
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
-bool pressed = false;
+bool pressing = false;
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
 
@@ -105,6 +108,13 @@ const node NODES[][10] = {
 // for each node, stores whether the node is stale, i.e. has to be redrawn
 bool stale[6][10];
 
+// Edit mode
+bool inEditMode = false;
+bool pressingTrunk = false;
+unsigned long trunkPressStart = 0;
+#define LONG_PRESS_DURATION 3000
+int editTime[ROWS];
+
 // converts a millisecond time of day to their graphical representation
 // and stores that within the given array
 void millisToArray(unsigned long ms, int* arr) {
@@ -184,25 +194,31 @@ void drawEdge(int r, int c1, int c2, bool active) {
 
 // displays the current timeOfDay on the screen
 // the old displayedTime is erased in the process
-void updateTimeDisplay() {
-    int tod[ROWS];
-    millisToArray(timeOfDay, tod);
+void updateTimeDisplay(bool useEditTime) {
+    int* time;
+    if (useEditTime)
+        time = editTime;
+    else {
+        int tod[6];
+        millisToArray(timeOfDay, tod);
+        time = tod;
+    }
     for (int r = 0; r < ROWS; r++) {
         if (r + 1 < ROWS) {
             // if edge has changed
-            if (tod[r] != displayedTime[r] || tod[r+1] != displayedTime[r+1]) {
+            if (time[r] != displayedTime[r] || time[r+1] != displayedTime[r+1]) {
                 // erase old edge (draw as inactive) and draw new edge as active
                 drawEdge(r, displayedTime[r], displayedTime[r+1], false);
-                drawEdge(r, tod[r], tod[r+1], true);
+                drawEdge(r, time[r], time[r+1], true);
             }
         }
         // if node has changed
-        if (tod[r] != displayedTime[r]) {
+        if (time[r] != displayedTime[r]) {
             // mark both (old and new) nodes as stale
             stale[r][displayedTime[r]] = true;
-            stale[r][tod[r]] = true;
+            stale[r][time[r]] = true;
         }
-        displayedTime[r] = tod[r];
+        displayedTime[r] = time[r];
     }
     // redraw the stale nodes
     for (int r = 0; r < ROWS; r++) {
@@ -213,6 +229,37 @@ void updateTimeDisplay() {
             }
         }
     }
+}
+
+void startEditMode() {
+    inEditMode = true;
+
+    // drawButtons
+    tft.setTextSize(3);
+    tft.setTextColor(BUTTON_CONTENT);
+    tft.fillRoundRect(20, 425, 90, 45, 5, CANCEL_BUTTON);
+    tft.setCursor(29, 435);
+    tft.print("BACK");
+    tft.fillRoundRect(210, 425, 90, 45, 5, CONFIRM_BUTTON);
+    tft.setCursor(237, 435);
+    tft.print("OK");
+
+    for (int r = 0; r < ROWS; r++) {
+        editTime[r] = displayedTime[r];
+    }
+}
+
+void stopEditMode(bool persist) {
+    inEditMode = false;
+
+    if (persist)
+        timeOfDay = arrayToMillis(editTime);
+
+    // erase Buttons
+    tft.fillRect(20, 425, 90, 45, BACKGROUND);
+    tft.fillRect(210, 425, 90, 45, BACKGROUND);
+
+    updateTimeDisplay(false);
 }
 
 void setup() {
@@ -233,7 +280,6 @@ void setup() {
             }
         }
         for (int c = 0; c < ROW_SIZE[r]; c++) {
-            // reset stale flag for each node
             stale[r][c] = false;
             drawNode(r, c, displayedTime[r] == c);
         }
@@ -248,7 +294,8 @@ void loop() {
         // do update
         timeOfDay += currentMillis - lastMillis;
         timeOfDay %= MILLIS_PER_DAY;
-        updateTimeDisplay();
+        if (!inEditMode)
+            updateTimeDisplay(false);
         lastMillis = currentMillis;
     }
 
@@ -260,31 +307,49 @@ void loop() {
 
     // check if the user touches the screen
     if (tp.z > MINPRESSURE && tp.z < MAXPRESSURE) {
-        if (!pressed) {
-            pressed = true;
-            // map the readings to coordinates on the screen
-            unsigned int xpos = map(tp.x, TS_LEFT, TS_RT, 0, tft.width());
-            unsigned int ypos = map(tp.y, TS_TOP, TS_BOT, 0, tft.height());
-
-            // check every node if it contains the given coordinates
-            for (int r = 0; r < ROWS; r++) {
-                for (int c = 0; c < ROW_SIZE[r]; c++) {
-                    if (distance(NODES[r][c].x, NODES[r][c].y, xpos, ypos) <= CIRCLE_RADIUS) {
-                        int old = displayedTime[r];
-                        displayedTime[r] = c;
-                        unsigned long ms = arrayToMillis(displayedTime);
-                        // restore old value for proper visual updating
-                        displayedTime[r] = old;
-
-                        // only update time if input was valid
-                        if (ms < MILLIS_PER_DAY) {
-                            timeOfDay = ms;
-                            updateTimeDisplay();
+        // map the readings to coordinates on the screen
+        unsigned int xpos = map(tp.x, TS_LEFT, TS_RT, 0, tft.width());
+        unsigned int ypos = map(tp.y, TS_TOP, TS_BOT, 0, tft.height());
+        if (!pressing) {
+            pressing = true;
+            if (inEditMode) {
+                // check every node if it contains the given coordinates
+                for (int r = 0; r < ROWS; r++) {
+                    for (int c = 0; c < ROW_SIZE[r]; c++) {
+                        if (distance(NODES[r][c].x, NODES[r][c].y, xpos, ypos) <= CIRCLE_RADIUS) {
+                            int old = editTime[r];
+                            editTime[r] = c;
+                            unsigned long ms = arrayToMillis(editTime);
+                            // only update time if input was valid
+                            if (ms < MILLIS_PER_DAY)
+                                updateTimeDisplay(true);
+                            else
+                                editTime[r] = old;
+                            return;
                         }
                     }
                 }
-            }   
-        }     
-    } else
-        pressed = false;
+
+                // check for buttons   
+                if (20 <= xpos && xpos <= 110 && 425 <= ypos && ypos <= 470)
+                    // cancel button
+                    stopEditMode(false);
+                else if (210 <= xpos && xpos <= 300 && 425 <= ypos && ypos <= 470)
+                    // confirm button
+                    stopEditMode(true);
+            } else if (130 <= xpos && xpos <= 190 && 415 <= ypos) {
+                // trunk pressed
+                pressingTrunk = true;
+                trunkPressStart = currentMillis;
+            }
+        } else {
+            if (!(130 <= xpos && xpos <= 190 && 415 <= ypos))
+                pressingTrunk = false;
+            if (!inEditMode && pressingTrunk && currentMillis - trunkPressStart >= LONG_PRESS_DURATION)
+                startEditMode();
+        }  
+    } else {
+        pressing = false;
+        pressingTrunk = false;
+    }
 }
