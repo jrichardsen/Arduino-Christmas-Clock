@@ -121,7 +121,7 @@ void millisToArray(unsigned long ms, int* arr) {
 unsigned long arrayToMillis(int* arr) {
     // using horner
     unsigned long seconds = 0;
-    for (int i = ROWS - 1; i >= 0; i--) {
+    for (int i = 0; i < ROWS; i++) {
         seconds *= ROW_SIZE[i];
         seconds += arr[i];
     }
