@@ -29,9 +29,11 @@ bool pressing = false;
 
 // Time
 #define MILLIS_PER_DAY 86400000UL
+#define TIME_DEVIATION 1.00140625
 int displayedTime[] = {0, 0, 0, 0, 0, 0};
 unsigned long lastMillis = 0;
 unsigned long timeOfDay = 0;
+unsigned long lastUpdateTime = 0;
 
 // Graphics
 struct node {
@@ -200,7 +202,7 @@ void updateTimeDisplay(bool useEditTime) {
         time = editTime;
     else {
         int tod[6];
-        millisToArray(timeOfDay, tod);
+        millisToArray(timeOfDay / TIME_DEVIATION, tod);
         time = tod;
     }
     for (int r = 0; r < ROWS; r++) {
@@ -253,7 +255,7 @@ void stopEditMode(bool persist) {
     inEditMode = false;
 
     if (persist)
-        timeOfDay = arrayToMillis(editTime);
+        timeOfDay = arrayToMillis(editTime) * TIME_DEVIATION;
 
     // erase Buttons
     tft.fillRect(20, 425, 90, 45, BACKGROUND);
@@ -289,14 +291,17 @@ void setup() {
 void loop() {
     // Time logic
     unsigned long currentMillis = millis();
-    // do updates at start of second but not multiple times a second
-    if (currentMillis / 1000 != lastMillis / 1000) {
+    timeOfDay += currentMillis - lastMillis;
+    timeOfDay %= (unsigned long)(MILLIS_PER_DAY * TIME_DEVIATION);
+    lastMillis = currentMillis;
+
+    // update graphics whenever the second changes
+    if ((unsigned long)(timeOfDay / TIME_DEVIATION) / 1000 != (unsigned long)(lastUpdateTime / TIME_DEVIATION) / 1000) {
         // do update
-        timeOfDay += currentMillis - lastMillis;
-        timeOfDay %= MILLIS_PER_DAY;
-        if (!inEditMode)
+        if (!inEditMode) {
             updateTimeDisplay(false);
-        lastMillis = currentMillis;
+            lastUpdateTime = timeOfDay;
+        }
     }
 
     // Touch logic
