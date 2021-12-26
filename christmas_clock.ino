@@ -3,18 +3,18 @@
 #include <TouchScreen.h>
 
 // Colors
-#define BACKGROUND      0x0033
-#define TREE            0x00A0
-#define TRUNK           0x3100
-#define NODE_BORDER     0x0000
-#define NODE_CONTENT    0x0000
-#define ACTIVE_NODE     0xF800
-#define INACTIVE_NODE   0xAA00
-#define ACTIVE_EDGE     0xF800
-#define INACTIVE_EDGE   0x00E0
-#define CANCEL_BUTTON   0x8800
-#define CONFIRM_BUTTON  0x0440
-#define BUTTON_CONTENT  0xFFFF
+#define BACKGROUND_COLOR       0x0033
+#define TREE_COLOR             0x00A0
+#define TRUNK_COLOR            0x3100
+#define NODE_BORDER_COLOR      0x0000
+#define NODE_CONTENT_COLOR     0x0000
+#define ACTIVE_NODE_COLOR      0xF800
+#define INACTIVE_NODE_COLOR    0xAA00
+#define ACTIVE_EDGE_COLOR      0xF800
+#define INACTIVE_EDGE_COLOR    0x00E0
+#define CANCEL_BUTTON_COLOR    0x8800
+#define CONFIRM_BUTTON_COLOR   0x0440
+#define BUTTON_CONTENT_COLOR   0xFFFF
 
 // Screen
 MCUFRIEND_kbv tft;
@@ -147,19 +147,19 @@ double distance(int x1, int y1, int x2, int y2) {
 
 // draws background, christmas tree and trunk
 void drawBackground() {
-    tft.fillScreen(BACKGROUND);
-    tft.fillTriangle(160, 0, 0, 175, 320, 175, TREE);
-    tft.fillTriangle(160, 100, 0, 295, 320, 295, TREE);
-    tft.fillTriangle(160, 220, 0, 415, 320, 415, TREE);
-    tft.fillRect(130, 415, 60, 65, TRUNK);
+    tft.fillScreen(BACKGROUND_COLOR);
+    tft.fillTriangle(160, 0, 0, 175, 320, 175, TREE_COLOR);
+    tft.fillTriangle(160, 100, 0, 295, 320, 295, TREE_COLOR);
+    tft.fillTriangle(160, 220, 0, 415, 320, 415, TREE_COLOR);
+    tft.fillRect(130, 415, 60, 65, TRUNK_COLOR);
 }
 
 // draws the node in (r, c), i.e. row r and column c
 void drawNode(int r, int c, bool active) {
     node v = NODES[r][c];
-    tft.fillCircle(v.x, v.y, CIRCLE_RADIUS, active ? ACTIVE_NODE : INACTIVE_NODE);
-    tft.drawCircle(v.x, v.y, CIRCLE_RADIUS, NODE_BORDER);
-    tft.drawChar(v.x-5, v.y-7, v.value + '0', NODE_CONTENT, NODE_CONTENT, 2);
+    tft.fillCircle(v.x, v.y, CIRCLE_RADIUS, active ? ACTIVE_NODE_COLOR : INACTIVE_NODE_COLOR);
+    tft.drawCircle(v.x, v.y, CIRCLE_RADIUS, NODE_BORDER_COLOR);
+    tft.drawChar(v.x-5, v.y-7, v.value + '0', NODE_CONTENT_COLOR, NODE_CONTENT_COLOR, 2);
 }
 
 // draws the edge between the nodes in (r, c1) and (r+1, c2)
@@ -182,7 +182,7 @@ void drawEdge(int r, int c1, int c2, bool active) {
     x2 -= ceil(dx);
     y2 -= ceil(dy);
 
-    tft.drawLine(x1, y1, x2, y2, active ? ACTIVE_EDGE : INACTIVE_EDGE);
+    tft.drawLine(x1, y1, x2, y2, active ? ACTIVE_EDGE_COLOR : INACTIVE_EDGE_COLOR);
 
     int diffx = (x2 - x1) / 100;
     // if x coordinates of nodes differ to much, their connecting edge will
@@ -238,11 +238,11 @@ void startEditMode() {
 
     // drawButtons
     tft.setTextSize(3);
-    tft.setTextColor(BUTTON_CONTENT);
-    tft.fillRoundRect(20, 425, 90, 45, 5, CANCEL_BUTTON);
+    tft.setTextColor(BUTTON_CONTENT_COLOR);
+    tft.fillRoundRect(20, 425, 90, 45, 5, CANCEL_BUTTON_COLOR);
     tft.setCursor(29, 435);
     tft.print("BACK");
-    tft.fillRoundRect(210, 425, 90, 45, 5, CONFIRM_BUTTON);
+    tft.fillRoundRect(210, 425, 90, 45, 5, CONFIRM_BUTTON_COLOR);
     tft.setCursor(237, 435);
     tft.print("OK");
 
@@ -258,8 +258,8 @@ void stopEditMode(bool persist) {
         timeOfDay = arrayToMillis(editTime) * TIME_DEVIATION;
 
     // erase Buttons
-    tft.fillRect(20, 425, 90, 45, BACKGROUND);
-    tft.fillRect(210, 425, 90, 45, BACKGROUND);
+    tft.fillRect(20, 425, 90, 45, BACKGROUND_COLOR);
+    tft.fillRect(210, 425, 90, 45, BACKGROUND_COLOR);
 
     updateTimeDisplay(false);
 }
