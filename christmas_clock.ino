@@ -1,6 +1,8 @@
 #include <Adafruit_GFX.h>
 #include <MCUFRIEND_kbv.h>
 #include <TouchScreen.h>
+#include <DS3231.h>
+#include <Wire.h>
 
 // Colors
 #define BACKGROUND_COLOR       0x0033
@@ -28,6 +30,9 @@ bool pressing = false;
 #define MAXPRESSURE 1000
 
 // Time
+DS3231 rtc;
+#define POLLING_INTERVAL 86400000UL
+unsigned long lastPoll = 0;
 #define MILLIS_PER_DAY 86400000UL
 #define TIME_DEVIATION 1.00140625
 int displayedTime[] = {0, 0, 0, 0, 0, 0};
@@ -140,6 +145,32 @@ unsigned long arrayToMillis(int* arr) {
     return seconds * 1000;
 }
 
+unsigned long corrected(unsigned long time) {
+    return time / TIME_DEVIATION;
+}
+
+// fetches the time from the rtc and updates timeOfDay
+void fetchRTCTime() {
+    bool _;
+    timeOfDay = rtc.getHour(_, _) * 3600UL;
+    timeOfDay += rtc.getMinute() * 60UL;
+    timeOfDay += rtc.getSecond();
+    timeOfDay *= 1000;
+    timeOfDay *= TIME_DEVIATION;
+    lastMillis = millis();
+    lastPoll = lastMillis;
+}
+
+// updates the rtc with the current time
+void changeRTCTime() {
+    byte hour = corrected(timeOfDay) / 3600000UL;
+    byte minute = (corrected(timeOfDay) % 3600000UL) / 60000UL;
+    byte second = (corrected(timeOfDay) % 60000UL) / 1000UL;
+    rtc.setHour(hour);
+    rtc.setMinute(minute);
+    rtc.setSecond(second);
+}
+
 // calculates euclidian distance of two points
 double distance(int x1, int y1, int x2, int y2) {
     return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
@@ -202,7 +233,7 @@ void updateTimeDisplay(bool useEditTime) {
         time = editTime;
     else {
         int tod[6];
-        millisToArray(timeOfDay / TIME_DEVIATION, tod);
+        millisToArray(corrected(timeOfDay), tod);
         time = tod;
     }
     for (int r = 0; r < ROWS; r++) {
@@ -254,8 +285,10 @@ void startEditMode() {
 void stopEditMode(bool persist) {
     inEditMode = false;
 
-    if (persist)
+    if (persist) {
         timeOfDay = arrayToMillis(editTime) * TIME_DEVIATION;
+        changeRTCTime();
+    }
 
     // erase Buttons
     tft.fillRect(20, 425, 90, 45, BACKGROUND_COLOR);
@@ -265,11 +298,19 @@ void stopEditMode(bool persist) {
 }
 
 void setup() {
+    // initialize i2c
+    Wire.begin();
     // initialize screen
     unsigned int ID = tft.readID();
     Serial.begin(9600);
     Serial.println(String(ID)); 
     tft.begin(ID);
+
+    // set 24 hour mode
+    rtc.setClockMode(false);
+
+    fetchRTCTime();
+    millisToArray(corrected(timeOfDay), displayedTime);
 
     // draw background and initial state
     drawBackground();
@@ -277,9 +318,10 @@ void setup() {
         if (r + 1 < ROWS) {
             for (int c1 = 0; c1 < ROW_SIZE[r]; c1++) {
                 for (int c2 = 0; c2 < ROW_SIZE[r+1]; c2++) {
-                    drawEdge(r, c1, c2, displayedTime[r] == c1 && displayedTime[r+1] == c2);
+                    drawEdge(r, c1, c2, false);
                 }
             }
+            drawEdge(r, displayedTime[r], displayedTime[r+1], true);
         }
         for (int c = 0; c < ROW_SIZE[r]; c++) {
             stale[r][c] = false;
@@ -296,13 +338,14 @@ void loop() {
     lastMillis = currentMillis;
 
     // update graphics whenever the second changes
-    if ((unsigned long)(timeOfDay / TIME_DEVIATION) / 1000 != (unsigned long)(lastUpdateTime / TIME_DEVIATION) / 1000) {
-        // do update
-        if (!inEditMode) {
-            updateTimeDisplay(false);
-            lastUpdateTime = timeOfDay;
-        }
+    if (!inEditMode && corrected(timeOfDay) / 1000 != corrected(lastUpdateTime) / 1000) {
+        updateTimeDisplay(false);
+        lastUpdateTime = timeOfDay;
     }
+
+    // regularly fetch time from the rtc
+    if (currentMillis - lastPoll > POLLING_INTERVAL)
+        fetchRTCTime();
 
     // Touch logic
     TSPoint tp = ts.getPoint();
