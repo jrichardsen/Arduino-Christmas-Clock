@@ -5,18 +5,21 @@
 #include <Wire.h>
 
 // Colors
-#define BACKGROUND_COLOR       0x0033
-#define TREE_COLOR             0x00A0
-#define TRUNK_COLOR            0x3100
-#define NODE_BORDER_COLOR      0x0000
-#define NODE_CONTENT_COLOR     0x0000
-#define ACTIVE_NODE_COLOR      0xF800
-#define INACTIVE_NODE_COLOR    0xAA00
-#define ACTIVE_EDGE_COLOR      0xF800
-#define INACTIVE_EDGE_COLOR    0x00E0
-#define CANCEL_BUTTON_COLOR    0x8800
-#define CONFIRM_BUTTON_COLOR   0x0440
-#define BUTTON_CONTENT_COLOR   0xFFFF
+#define WELCOME_BG_COLOR        0x0000
+#define WELCOME_HEART_COLOR     0xF800
+#define WELCOME_TEXT_COLOR      0xFFFF
+#define BACKGROUND_COLOR        0x0033
+#define TREE_COLOR              0x00A0
+#define TRUNK_COLOR             0x3100
+#define NODE_BORDER_COLOR       0x0000
+#define NODE_CONTENT_COLOR      0x0000
+#define ACTIVE_NODE_COLOR       0xF800
+#define INACTIVE_NODE_COLOR     0xAA00
+#define ACTIVE_EDGE_COLOR       0xF800
+#define INACTIVE_EDGE_COLOR     0x00E0
+#define CANCEL_BUTTON_COLOR     0x8800
+#define CONFIRM_BUTTON_COLOR    0x0440
+#define BUTTON_CONTENT_COLOR    0xFFFF
 
 // Screen
 MCUFRIEND_kbv tft;
@@ -30,6 +33,7 @@ bool pressing = false;
 #define MAXPRESSURE 1000
 
 // Time
+#define WELCOME_SCREEN_TIME 10000UL
 DS3231 rtc;
 #define POLLING_INTERVAL 86400000UL
 unsigned long lastPoll = 0;
@@ -176,6 +180,19 @@ double distance(int x1, int y1, int x2, int y2) {
     return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 }
 
+void drawWelcomeScreen() {
+    tft.fillScreen(WELCOME_BG_COLOR);
+    tft.fillCircle(100, 200, 80, WELCOME_HEART_COLOR);
+    tft.fillCircle(220, 200, 80, WELCOME_HEART_COLOR);
+    tft.fillTriangle(43, 257, 277, 257, 160, 359, WELCOME_HEART_COLOR);
+    tft.setTextSize(3);
+    tft.setTextColor(WELCOME_TEXT_COLOR);
+    tft.setCursor(115, 180);
+    tft.print("FROHE");
+    tft.setCursor(61, 220);
+    tft.print("WEIHNACHTEN");
+}
+
 // draws background, christmas tree and trunk
 void drawBackground() {
     tft.fillScreen(BACKGROUND_COLOR);
@@ -311,6 +328,9 @@ void setup() {
 
     fetchRTCTime();
     millisToArray(corrected(timeOfDay), displayedTime);
+
+    drawWelcomeScreen();
+    delay(WELCOME_SCREEN_TIME);
 
     // draw background and initial state
     drawBackground();
