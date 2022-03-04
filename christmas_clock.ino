@@ -180,6 +180,28 @@ double distance(int x1, int y1, int x2, int y2) {
     return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 }
 
+// compute distance of point p at (x, y) to segment from p1 at (x1, y1) to p2 at (x2, y2)
+double distancePointToSegment(int x, int y, int x1, int y1, int x2, int y2) {
+    // vector s from p1 to p2
+    double sx = x2 - x1;
+    double sy = y2 - y1;
+    // vector v1 from p1 to p
+    double v1x = x - x1;
+    double v1y = y - y1;
+    // vector v2 from p2 to p
+    double v2x = x - x2;
+    double v2y = y - y2;
+    if (sx*v1x + sy*v1y <= 0) {
+        return sqrt(v1x*v1x + v1y*v1y);
+    }
+    if (sx*v2x + sy*v2y >= 0) {
+        return sqrt(v2x*v2x + v2y*v2y);
+    }
+    // calculate the area of the parallelogram spanned by s and v1 and divide by the length of s
+    // to get the height of the parallelogram (which is the height of p over the segment)
+    return abs(v1x*sy - v1y*sx) / sqrt(sx*sx + sy*sy);
+}
+
 void drawWelcomeScreen() {
     tft.fillScreen(WELCOME_BG_COLOR);
     tft.fillCircle(100, 200, 80, WELCOME_HEART_COLOR);
@@ -232,13 +254,11 @@ void drawEdge(int r, int c1, int c2, bool active) {
 
     tft.drawLine(x1, y1, x2, y2, active ? ACTIVE_EDGE_COLOR : INACTIVE_EDGE_COLOR);
 
-    int diffx = (x2 - x1) / 100;
-    // if x coordinates of nodes differ to much, their connecting edge will
-    // overlap the neighbouring nodes
-    // therefore these nodes need to be redrawn
-    if (diffx != 0) {
-        stale[r][c1+diffx] = true;
-        stale[r+1][c2-diffx] = true;
+    // check if the edge draws over any nodes
+    for (int nr = 0; nr < ROWS; nr++) {
+        for (int nc = 0; nc < ROW_SIZE[nr]; nc++) {
+            stale[nr][nc] = stale[nr][nc] || distancePointToSegment(NODES[nr][nc].x, NODES[nr][nc].y, x1, y1, x2, y2) < CIRCLE_RADIUS;
+        }
     }
 }
 
@@ -320,7 +340,7 @@ void setup() {
     // initialize screen
     unsigned int ID = tft.readID();
     Serial.begin(9600);
-    Serial.println(String(ID)); 
+    Serial.println(String(ID));
     tft.begin(ID);
 
     // set 24 hour mode
