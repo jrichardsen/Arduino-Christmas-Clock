@@ -48,72 +48,71 @@ unsigned long lastUpdateTime = 0;
 struct node {
     int x; 
     int y;
-    int value;
 };
 
 const int CIRCLE_RADIUS = 12;
 const int ROWS = 6;
 const int ROW_SIZE[] = {3, 10, 6, 10, 6, 10};
 
-// stores position and value of all nodes
+// stores position of all nodes
 // actual dimensions of the array are contained within "ROW" and "ROW_SIZE" constants
 const node NODES[][10] = {
     {
-        {100, 100, 0},
-        {160, 100, 1},
-        {220, 100, 2},
+        {100, 100},
+        {160, 100},
+        {220, 100},
     },
     {
-        { 25, 160, 0},
-        { 55, 160, 1},
-        { 85, 160, 2},
-        {115, 160, 3},
-        {145, 160, 4},
-        {175, 160, 5},
-        {205, 160, 6},
-        {235, 160, 7},
-        {265, 160, 8},
-        {295, 160, 9},
+        { 25, 160},
+        { 55, 160},
+        { 85, 160},
+        {115, 160},
+        {145, 160},
+        {175, 160},
+        {205, 160},
+        {235, 160},
+        {265, 160},
+        {295, 160},
     },
     {
-        { 85, 220, 0},
-        {115, 220, 1},
-        {145, 220, 2},
-        {175, 220, 3},
-        {205, 220, 4},
-        {235, 220, 5},
+        { 85, 220},
+        {115, 220},
+        {145, 220},
+        {175, 220},
+        {205, 220},
+        {235, 220},
     },
     {
-        { 25, 280, 0},
-        { 55, 280, 1},
-        { 85, 280, 2},
-        {115, 280, 3},
-        {145, 280, 4},
-        {175, 280, 5},
-        {205, 280, 6},
-        {235, 280, 7},
-        {265, 280, 8},
-        {295, 280, 9},
+        { 25, 280},
+        { 55, 280},
+        { 85, 280},
+        {115, 280},
+        {145, 280},
+        {175, 280},
+        {205, 280},
+        {235, 280},
+        {265, 280},
+        {295, 280},
     },
     {
-        { 85, 340, 0},
-        {115, 340, 1},
-        {145, 340, 2},
-        {175, 340, 3},
-        {205, 340, 4},
-        {235, 340, 5},
+        { 85, 340},
+        {115, 340},
+        {145, 340},
+        {175, 340},
+        {205, 340},
+        {235, 340},
     },
     {
-        { 25, 400, 0},
-        { 55, 400, 1},
-        { 85, 400, 2},
-        {115, 400, 3},
-        {145, 400, 4},
-        {175, 400, 5},
-        {205, 400, 6},
-        {235, 400, 7},
-        {265, 400, 8},
-        {295, 400, 9},
+        { 25, 400},
+        { 55, 400},
+        { 85, 400},
+        {115, 400},
+        {145, 400},
+        {175, 400},
+        {205, 400},
+        {235, 400},
+        {265, 400},
+        {295, 400},
     }
 };
 // for each node, stores whether the node is stale, i.e. has to be redrawn
@@ -229,7 +228,7 @@ void drawNode(int r, int c, bool active) {
     node v = NODES[r][c];
     tft.fillCircle(v.x, v.y, CIRCLE_RADIUS, active ? ACTIVE_NODE_COLOR : INACTIVE_NODE_COLOR);
     tft.drawCircle(v.x, v.y, CIRCLE_RADIUS, NODE_BORDER_COLOR);
-    tft.drawChar(v.x-5, v.y-7, v.value + '0', NODE_CONTENT_COLOR, NODE_CONTENT_COLOR, 2);
+    tft.drawChar(v.x-5, v.y-7, c + '0', NODE_CONTENT_COLOR, NODE_CONTENT_COLOR, 2);
 }
 
 // draws the edge between the nodes in (r, c1) and (r+1, c2)
