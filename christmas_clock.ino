@@ -205,6 +205,7 @@ void drawWelcomeScreen() {
     tft.fillScreen(WELCOME_BG_COLOR);
     tft.fillCircle(100, 200, 80, WELCOME_HEART_COLOR);
     tft.fillCircle(220, 200, 80, WELCOME_HEART_COLOR);
+    tft.fillTriangle(43, 257, 277, 257, 160, 240, WELCOME_HEART_COLOR);
     tft.fillTriangle(43, 257, 277, 257, 160, 359, WELCOME_HEART_COLOR);
     tft.setTextSize(3);
     tft.setTextColor(WELCOME_TEXT_COLOR);
